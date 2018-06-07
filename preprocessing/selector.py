@@ -6,8 +6,8 @@ import os
 import logging
 import heapq
 import numpy as np
-from tqdm import trange
-import concurrent.futures
+from tqdm import tqdm, trange
+from multiprocessing import Pool
 LOG_FILENAME = 'failed_files.log'
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -23,18 +23,20 @@ if tumor_type != "gbm" and tumor_type != "lgg":
 	sys.exit("Wrong type. Please enter a tumor type (gbm or lgg)")
 
 print("tumor type",tumor_type)
-in_path = "../tcga/originals/" + tumor_type + "/"
-out_path = "../tcga/" + "dense" + "/" + tumor_type + "/"
-desired_size = 1000
-overlap = 200
-magnification = 1
+IN_PATH = "../tcga/originals/" + tumor_type + "/"
+OUT_PATH = "../tcga/" + "dense_full_mag" + "/" + tumor_type + "/"
+DESIRED_SIZE = 2000
+overlap = 100
+magnification = 0
+
+print(55000.0 / (DESIRED_SIZE - overlap))
 
 def calc_density(image_chunk):
 	pixels = np.array(image_chunk)
 	return float(np.sum(pixels < 200)) / pixels.size
 
 #Use a min heap to keep top 10 density chunks for each image.
-def selectTop10(full_path, desired_size):
+def selectTop10(full_path, desired_size=DESIRED_SIZE):   
 	top10 = []
 	original = openslide.OpenSlide(full_path)
 	full_x, full_y = original.level_dimensions[magnification]
@@ -51,26 +53,29 @@ def selectTop10(full_path, desired_size):
 			i+=1
 	return top10
 
-filenames = os.listdir(in_path)
-'''
-if multithreading:
-    executor = concurrent.futures.ProcessPoolExecutor(10)
-    futures = [executor.submit(selectTop10, (in_path + filename, desired_size)) for filename in filenames]
-    concurrent.futures.wait(futures)
-    sys.exit(0)
-'''
-
-for i in trange(len(filenames)):
-	filename = filenames[i]
-	out_name = out_path + filename + "_" + str(2) + '.png'
-	already_created = set(os.listdir(out_path))
-	if out_name in already_created:
-		continue
-	try: 
-		top10 = selectTop10(in_path + filename, desired_size)
+def saveTop10(filename, desired_size=DESIRED_SIZE):
+	global IN_PATH
+	savepath = OUT_PATH + filename + "_"
+	if os.path.exists(savepath + "0.png"):
+		logging.error('file_already_exists; skipping')
+		return
+	img_path = IN_PATH + filename
+	try:
+		top10 = selectTop10(img_path, desired_size)
 		for j, entry in enumerate(top10):
 			im = entry[2]
-			im.save(out_path + filename + "_" + str(j) + '.png', "PNG")
+			im.save(savepath + str(j) + '.png', "PNG")
 	except:
-		print("excception")
-		logging.error('Tile error with '+filename)
+		print('failure')
+		logging.error('tile error with '+filename)
+    
+filenames = os.listdir(IN_PATH)
+
+#saveTop10(filenames[0])#'TCGA-S9-A7QZ-01A-01-TSA.BD1DB4BE-E9A6-4AB9-B873-C8B72DFBD6C9.svs')
+
+#print(filenames)
+
+pool = Pool(8)
+
+for _ in tqdm(pool.imap_unordered(saveTop10, filenames), total=len(filenames)):
+	pass
