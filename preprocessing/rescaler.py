@@ -14,7 +14,7 @@ pairs = [(in_paths[i], out_paths[i]) for i in range(len(in_paths))]
 in_path = None
 out_path = None
 
-pool = Pool(1)
+pool = Pool(8)
 
 def resizeFile(filename):
     global in_path
