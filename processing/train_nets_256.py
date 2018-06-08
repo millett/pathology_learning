@@ -215,21 +215,31 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 models = {}
 
-
+'''
 squeeze1_p = torchvision.models.squeezenet1_1(pretrained=True)#, num_classes =1783 )
 #squeeze1_p.classifier[1] = nn. Conv2d(512, 2, kernel_size=(1, 1), stride=(1, 1))
 models['squeeze1_p'] = squeeze1_p
-
+'''
 resnet18_p = torchvision.models.resnet18(pretrained=True)#, num_classes =1783 )
 #squeeze1_p.classifier[1] = nn. Conv2d(512, 2, kernel_size=(1, 1), stride=(1, 1))
 models['resnet18_p'] = resnet18_p
-
-
+'''
 models['squeeze1_n'] = torchvision.models.squeezenet1_1(pretrained=False, num_classes = 2)
 models['resnet18_n'] = torchvision.models.resnet18(pretrained=False, num_classes = 2)
 
-ce_loss = nn.CrossEntropyLoss()
 
+
+vgg11_p = torchvision.models.vgg11(pretrained=True)#, num_classes =1783 )
+#squeeze1_p.classifier[1] = nn. Conv2d(512, 2, kernel_size=(1, 1), stride=(1, 1))
+models['vgg11_p'] = vgg11_p
+
+
+vgg11_n = torchvision.models.vgg11(pretrained=False)#, num_classes =1783 )
+#squeeze1_p.classifier[1] = nn. Conv2d(512, 2, kernel_size=(1, 1), stride=(1, 1))
+models['vgg11_n'] = vgg11_n
+'''
+#ce_loss = nn.CrossEntropyLoss()
+ce_loss = nn.CrossEntropyLoss(weight = torch.cuda.FloatTensor([0.5,1])) # set weight of GBM/LGG to get better precision/recall balance
 model_outputs = {}
 
 print('running models')
@@ -244,7 +254,7 @@ for model_type in models:
                   'train_confusion':tc,'val_confusion':vc,\
                   'best_acc':best_acc,'best_confusion':best_confusion}
     model_outputs[model_type] = model_output
-    torch.save(model_outputs[model_type], DATA_TYPE + model_type + "_model.mod")
-    with open(DATA_TYPE + model_type + '_dict.pickle', 'wb') as handle:
+    torch.save(model_outputs[model_type], DATA_TYPE + model_type + "_model_tweakloss.mod")
+    with open(DATA_TYPE + model_type + '_dict_tweakloss.pickle', 'wb') as handle:
         pickle.dump(model_output, handle, protocol=pickle.HIGHEST_PROTOCOL)
 

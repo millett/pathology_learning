@@ -13,13 +13,13 @@ import copy
 from tqdm import tqdm
 import pickle
 
-DATA_TYPE = 'dense256/'
+DATA_TYPE = 'dense/'
 
 DATA_DIR = '../tcga/' + DATA_TYPE
 VERBOSE = True
 N_EPOCHS = 5
 
-INPUT_DIM = 256
+INPUT_DIM = 2000
 
 USE_TRANSFER = False
 
@@ -180,7 +180,7 @@ def visualize_model(model, num_images=6):
 
 data_transforms = {
     'train': transforms.Compose([
-        transforms.RandomResizedCrop(224),# remove for 2000
+        #transforms.RandomResizedCrop(224),# remove for 2000
         transforms.RandomRotation(5),
         transforms.ColorJitter(0.1,0.1,0.1,0.1),
         transforms.RandomHorizontalFlip(),
@@ -189,8 +189,8 @@ data_transforms = {
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
     'val': transforms.Compose([
-        transforms.Resize(256), # remove for 2000
-        transforms.CenterCrop(224), # remove for 2000
+        #transforms.Resize(256), # remove for 2000
+        #transforms.CenterCrop(224), # remove for 2000
         transforms.RandomHorizontalFlip(),
         transforms.RandomVerticalFlip(),
         transforms.ToTensor(),
@@ -214,15 +214,31 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 models = {}
+resnet18_p = torchvision.models.resnet18(pretrained=False)
+# add a maxPool layer
+#print('before')
+#print(resnet18_p.conv1)
+resnet18_p.conv1 = nn.Sequential(nn.MaxPool2d(kernel_size = 196, stride=8, padding=2), resnet18_p.conv1)
+#print('after')
+#print(resnet18_p.conv1)
+resnet18_p.fc = nn.Linear(resnet18_p.fc.in_features, 2)
+resnet18_p.avgpool = nn.AdaptiveAvgPool2d(1)
 
+models['resnet_n'] = resnet18_p
 
-squeeze1_p = torchvision.models.squeezenet1_1(pretrained=True)#, num_classes =1783 )
-#squeeze1_p.classifier[1] = nn. Conv2d(512, 2, kernel_size=(1, 1), stride=(1, 1))
-models['squeeze1_p'] = squeeze1_p
+#squeeze_p = torchvision.models.squeezenet1_1(pretrained=True)#, num_classes =1783 )
+#squeeze_p.features[0] =  nn.Conv2d(3, 64, kernel_size=(196, 196), stride=(8,8), padding=(2,2))
+#squeeze_p.classifier[3] = nn.AdaptiveAvgPool2d(1)
+#v.features[0] = a
+'''mine = torch.nn.Sequential(\
+                           nn.ReLU(),\
+                           nn.Conv2d(3, 64, kernel_size=(100, 100), stride=(,8), padding=(2,2)),\
+                           nn.MaxPool2d(kernel_size=
+    
+        )
 
-resnet18_p = torchvision.models.resnet18(pretrained=True)#, num_classes =1783 )
-#squeeze1_p.classifier[1] = nn. Conv2d(512, 2, kernel_size=(1, 1), stride=(1, 1))
-models['resnet18_p'] = resnet18_p
+models['mine'] = mine
+'''
 
 
 '''
@@ -236,16 +252,18 @@ models['squeeze1_p'] = squeeze1_p#models.squeezenet1_1(pretrained=True, num_clas
 resnet18_p = torchvision.models.resnet18(pretrained=True)
 num_ftrs = resnet18_p.fc.in_features
 resnet18_p.fc = nn.Linear(num_ftrs, 2)
-models['resnet18_p'] = resnet18_p
+'''
+#models['squeeze_p'] = squeeze_p
 
+'''
 model_ft = torchvision.models.resnet18(pretrained=True)
 num_ftrs = model_ft.fc.in_features
 model_ft.fc = nn.Linear(num_ftrs, 2)
-'''
+
 
 models['squeeze1_n'] = torchvision.models.squeezenet1_1(pretrained=False, num_classes = 2)
 models['resnet18_n'] = torchvision.models.resnet18(pretrained=False, num_classes = 2)
-
+'''
 ce_loss = nn.CrossEntropyLoss()
 
 model_outputs = {}
@@ -257,7 +275,6 @@ for model_type in models:
     models[model_type], tl, vl, tc, vc, best_acc, best_confusion = \
     outputs = \
     run_model(models[model_type], ce_loss, verbose=VERBOSE, epochs=N_EPOCHS)
-    #print(outputs[1:])
     model_output = {'train_loss':tl, 'val_loss':vl,\
                   'train_confusion':tc,'val_confusion':vc,\
                   'best_acc':best_acc,'best_confusion':best_confusion}
