@@ -1,5 +1,5 @@
 # pathology_learning
-Using traditional machine learning and deep learning methods to predict stuff from  TCGA pathology slides.
+Using traditional machine learning methods (see BMI260_final_report.pdf) and deep learning methods (see CS231N_final_report.pdf) to predict clinical characteristics from [TCGA](https://cancergenome.nih.gov/) [pathology slides.](https://console.cloud.google.com/storage/browser/isb-cgc-open/NCI-GDC/legacy/TCGA)
 
 This project pulls pathology slides (currently just of GBM and LGG tumors) from TCGA, processes them, and makes phenotypic predictions of tumor type, survival time, and tumor grade, based on images and semantic data (currently age and sex).
 
